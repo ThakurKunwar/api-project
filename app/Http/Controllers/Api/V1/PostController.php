@@ -7,6 +7,7 @@ use App\Http\Requests\StorePostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PostController extends Controller
 {
@@ -16,7 +17,9 @@ class PostController extends Controller
     public function index()
     {
         //
-        return PostResource::collection(Post::with('user')->paginate());
+        $user = request()->user();
+        $posts = $user->posts()->with('user')->paginate();
+        return PostResource::collection($posts);
     }
 
     /**
@@ -26,11 +29,11 @@ class PostController extends Controller
     {
         //
         $data = $request->validated();
-        $data['user_id'] = 1;
+        $data['user_id'] = $request->user()->id;
 
         $post = Post::create($data);
         return response()->json(
-            [new PostResource($post)],
+            [new PostResource($post->load('user'))],
             201
         );
     }
@@ -42,7 +45,12 @@ class PostController extends Controller
     {
         //
         $post = Post::findOrFail($id);
-        return (new PostResource($post));
+        $user = request()->user();
+
+        abort_if(Auth::id() != $post->user_id, 403, 'access forbidden');
+
+
+        return new PostResource($post->load('user'));
     }
 
     /**
@@ -51,12 +59,15 @@ class PostController extends Controller
     public function update(Request $request, string $id)
     {
         //
+        $post = Post::findOrFail($id);
+        abort_if(Auth::id() != $post->user_id, 403, 'access forbidden');
+
         $data =  $request->validate([
             'title' => ['required', 'min:4'],
             'body' => ['required', 'string', 'min:10'],
         ]);
 
-        $post = Post::findOrFail($id);
+
         $post->update($data);
         return (new PostResource($post));
     }
@@ -67,6 +78,13 @@ class PostController extends Controller
     public function destroy(string $id)
     {
         //
+
+        $post = Post::findOrFail($id);
+
+        abort_if(Auth::id() != $post->user_id, 403, 'access forbidden');
+
+        $post->delete();
+
         return response()->noContent();
     }
 }
