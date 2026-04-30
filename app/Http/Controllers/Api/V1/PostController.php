@@ -8,12 +8,23 @@ use App\Http\Resources\PostResource;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 
 class PostController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+
+    public function api()
+    {
+        $response = Http::get('https://jsonplaceholder.typicode.com/posts');
+
+        $posts = $response;
+
+        return response()->json($posts);
+    }
+
     public function index()
     {
         //
@@ -86,5 +97,9 @@ class PostController extends Controller
         $post->delete();
 
         return response()->noContent();
+    }
+    public function haha()
+    {
+        dd(config('services.openai.key'));
     }
 }
